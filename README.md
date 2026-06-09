@@ -16,8 +16,8 @@
 
 | 이름 | 역할 | GitHub |
 |------|------|--------|
-| 팀원A | Frontend / Backend | [@팀원A](https://github.com/) |
-| 팀원B | Frontend / Backend | [@팀원B](https://github.com/) |
+| 팀원A | Frontend / Backend | [추상현](https://github.com/) |
+| 팀원B | Frontend / Backend | [신재욱](https://github.com/) |
 
 <br />
 

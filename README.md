@@ -25,7 +25,7 @@
 
 ### Backend
 ![Java](https://img.shields.io/badge/Java-17-007396?style=flat-square&logo=java&logoColor=white)
-![SpringBoot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![SpringBoot](https://img.shields.io/badge/Spring_Boot-3.5.14-6DB33F?style=flat-square&logo=springboot&logoColor=white)
 ![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)
 ![JPA](https://img.shields.io/badge/JPA-Hibernate-59666C?style=flat-square&logo=hibernate&logoColor=white)
 ![QueryDSL](https://img.shields.io/badge/QueryDSL-5.0-brightgreen?style=flat-square)
@@ -36,6 +36,7 @@
 ![OAuth2](https://img.shields.io/badge/OAuth2-Kakao_Naver-FFCD00?style=flat-square)
 
 ### 실시간
+![SSE](https://img.shields.io/badge/SSE-실시간알림-brightgreen?style=flat-square)
 ![WebSocket](https://img.shields.io/badge/WebSocket-STOMP-brightgreen?style=flat-square)
 
 ### Database
@@ -75,7 +76,7 @@ src/main/java/com/devlink/
 - **회원 관리** — 이메일 회원가입 / 카카오 · 네이버 소셜 로그인 / JWT 인증
 - **게시판** — 자유게시판 / 면접 후기 / 기술 질문 / 취업 정보 CRUD
 - **스터디 모집** — 모집글 등록, 지원, 수락/거절, 마감 처리
-- **실시간 알림** — 댓글, 스터디 지원/수락 알림 (WebSocket STOMP)
+- **실시간 알림** — 댓글, 스터디 지원/수락 알림 (SSE)
 - **실시간 채팅** — 스터디 팀원 간 채팅방 (WebSocket STOMP)
 - **마이페이지** — 프로필 수정, 내 게시글, 스터디 내역
 
@@ -120,8 +121,9 @@ spring.datasource.username=your_db_username
 spring.datasource.password=your_db_password
 
 # JWT
-jwt.secret=your_jwt_secret_key
-jwt.expiration=86400000
+jwt.secret-key=your_jwt_secret_key
+jwt.access-token-validity-in-milliseconds=1800000
+jwt.refresh-token-validity-in-milliseconds=604800000
 
 # Kakao OAuth
 spring.security.oauth2.client.registration.kakao.client-id=your_kakao_client_id
@@ -152,6 +154,7 @@ spring.security.oauth2.client.registration.naver.client-secret=your_naver_client
 | 스터디 | GET | /api/studies | 스터디 목록 | ❌ |
 | 스터디 | POST | /api/studies | 모집글 등록 | ✅ |
 | 스터디 | POST | /api/studies/{id}/apply | 지원하기 | ✅ |
+| 알림 | GET | /api/notifications/subscribe | SSE 알림 구독 | ✅ |
 | 알림 | GET | /api/notifications | 알림 목록 | ✅ |
 | 채팅 | GET | /api/chat/rooms | 채팅방 목록 | ✅ |
 
@@ -174,7 +177,7 @@ fix/*       # 버그 수정 브랜치 (ex. fix/notification-bug)
 
 ## 📅 개발 기간
 
-2026.00.00 ~ 2026.00.00
+2026.06.04 ~ 2026.06.30
 
 <br />
 

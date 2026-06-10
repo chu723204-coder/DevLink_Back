@@ -165,10 +165,10 @@ spring.security.oauth2.client.registration.naver.client-secret=your_naver_client
 ## 🌿 브랜치 전략
 
 ```
-main        # 최종 배포 브랜치
-dev         # 개발 통합 브랜치
-feature/*   # 기능 개발 브랜치 (ex. feature/auth-login)
-fix/*       # 버그 수정 브랜치 (ex. fix/notification-bug)
+main          # 최종 배포 브랜치
+test_table    # 개발 통합 브랜치 (테스트/오류 확인)
+feature/*     # 기능 개발 브랜치 (ex. feature/auth-login)
+fix/*         # 버그 수정 브랜치 (ex. fix/notification-bug)
 ```
 
 > PR 시 1명 이상 코드 리뷰 승인 필수

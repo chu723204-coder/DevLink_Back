@@ -1,0 +1,125 @@
+package com.simplecoding.devlinkback.domain.auth.service;
+
+import com.simplecoding.devlinkback.domain.auth.dto.LoginRequest;
+import com.simplecoding.devlinkback.domain.auth.dto.LoginResponse;
+import com.simplecoding.devlinkback.domain.auth.dto.SignupRequest;
+import com.simplecoding.devlinkback.domain.auth.entity.RefreshToken;
+import com.simplecoding.devlinkback.domain.auth.repository.RefreshTokenRepository;
+import com.simplecoding.devlinkback.domain.user.entity.User;
+import com.simplecoding.devlinkback.domain.user.repository.UserRepository;
+import com.simplecoding.devlinkback.global.common.ApiResponse;
+import com.simplecoding.devlinkback.global.jwt.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
+
+    // 회원가입
+    @Transactional
+    public ApiResponse<Void> signup(SignupRequest request) {
+        // 이메일 중복 체크
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ApiResponse.fail("이미 사용 중인 이메일입니다.");
+        }
+        // 닉네임 중복 체크
+        if (userRepository.existsByNickname(request.getNickname())) {
+            return ApiResponse.fail("이미 사용 중인 닉네임입니다.");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .nickname(request.getNickname())
+                .role(User.Role.ROLE_USER)
+                .build();
+
+        userRepository.save(user);
+        return ApiResponse.success(null, "회원가입이 완료되었습니다.");
+    }
+
+    // 로그인
+    @Transactional
+    public ApiResponse<LoginResponse> login(LoginRequest request) {
+        // 이메일 조회
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElse(null);
+
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ApiResponse.fail("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        // 탈퇴 회원 체크
+        if (user.getDeleteYn().equals("Y")) {
+            return ApiResponse.fail("탈퇴한 회원입니다.");
+        }
+
+        // 토큰 생성
+        String accessToken = jwtTokenProvider.createAccessToken(user.getUserId(), user.getRole().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
+
+        // Refresh Token 저장 (있으면 업데이트, 없으면 새로 저장)
+        refreshTokenRepository.findByUserId(user.getUserId())
+                .ifPresentOrElse(
+                        token -> token.updateToken(refreshToken),
+                        () -> refreshTokenRepository.save(
+                                RefreshToken.builder()
+                                        .userId(user.getUserId())
+                                        .token(refreshToken)
+                                        .build()
+                        )
+                );
+
+        LoginResponse response = LoginResponse.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .nickname(user.getNickname())
+                .role(user.getRole().name())
+                .accessToken(accessToken)
+                .build();
+
+        return ApiResponse.success(response, "로그인 성공");
+    }
+
+    // 로그아웃
+    @Transactional
+    public ApiResponse<Void> logout(Long userId) {
+        refreshTokenRepository.deleteByUserId(userId);
+        return ApiResponse.success(null, "로그아웃 되었습니다.");
+    }
+
+    // 토큰 재발급
+    @Transactional
+    public ApiResponse<String> reissue(String refreshToken) {
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            return ApiResponse.fail("유효하지 않은 Refresh Token입니다.");
+        }
+
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+
+        RefreshToken savedToken = refreshTokenRepository.findByUserId(userId)
+                .orElse(null);
+
+        if (savedToken == null || !savedToken.getToken().equals(refreshToken)) {
+            return ApiResponse.fail("Refresh Token이 일치하지 않습니다.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElse(null);
+
+        if (user == null) {
+            return ApiResponse.fail("사용자를 찾을 수 없습니다.");
+        }
+
+        String newAccessToken = jwtTokenProvider.createAccessToken(user.getUserId(), user.getRole().name());
+        return ApiResponse.success(newAccessToken, "토큰 재발급 성공");
+    }
+}

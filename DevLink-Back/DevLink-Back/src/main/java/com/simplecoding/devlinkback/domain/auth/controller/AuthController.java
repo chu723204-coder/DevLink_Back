@@ -46,4 +46,19 @@ public class AuthController {
             @RequestHeader("Refresh-Token") String refreshToken) {
         return ResponseEntity.ok(authService.reissue(refreshToken));
     }
+
+    // 이메일 인증 코드 발송
+    @PostMapping("/email/send")
+    public ResponseEntity<ApiResponse<Void>> sendEmailCode(
+            @RequestParam String email) {
+        return ResponseEntity.ok(authService.sendEmailCode(email));
+    }
+
+    // 이메일 인증 코드 검증
+    @PostMapping("/email/verify")
+    public ResponseEntity<ApiResponse<Void>> verifyEmailCode(
+            @RequestParam String email,
+            @RequestParam String code) {
+        return ResponseEntity.ok(authService.verifyEmailCode(email, code));
+    }
 }

@@ -27,8 +27,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
-    // ✅ WebSocket (실시간 알림 + 채팅)
+    // ✅ WebSocket (실시간 채팅)
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // ✅ 이메일 (Gmail SMTP)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
     // ✅ PostgreSQL (Railway DB)
     runtimeOnly 'org.postgresql:postgresql'

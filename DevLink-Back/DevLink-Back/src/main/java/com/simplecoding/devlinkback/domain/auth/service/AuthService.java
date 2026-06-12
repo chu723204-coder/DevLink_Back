@@ -22,15 +22,14 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     // 회원가입
     @Transactional
     public ApiResponse<Void> signup(SignupRequest request) {
-        // 이메일 중복 체크
         if (userRepository.existsByEmail(request.getEmail())) {
             return ApiResponse.fail("이미 사용 중인 이메일입니다.");
         }
-        // 닉네임 중복 체크
         if (userRepository.existsByNickname(request.getNickname())) {
             return ApiResponse.fail("이미 사용 중인 닉네임입니다.");
         }
@@ -49,7 +48,6 @@ public class AuthService {
     // 로그인
     @Transactional
     public ApiResponse<LoginResponse> login(LoginRequest request) {
-        // 이메일 조회
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
@@ -57,16 +55,13 @@ public class AuthService {
             return ApiResponse.fail("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        // 탈퇴 회원 체크
         if (user.getDeleteYn().equals("Y")) {
             return ApiResponse.fail("탈퇴한 회원입니다.");
         }
 
-        // 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(user.getUserId(), user.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
 
-        // Refresh Token 저장 (있으면 업데이트, 없으면 새로 저장)
         refreshTokenRepository.findByUserId(user.getUserId())
                 .ifPresentOrElse(
                         token -> token.updateToken(refreshToken),
@@ -121,5 +116,22 @@ public class AuthService {
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getUserId(), user.getRole().name());
         return ApiResponse.success(newAccessToken, "토큰 재발급 성공");
+    }
+
+    // 이메일 인증 코드 발송
+    public ApiResponse<Void> sendEmailCode(String email) {
+        if (userRepository.existsByEmail(email)) {
+            return ApiResponse.fail("이미 사용 중인 이메일입니다.");
+        }
+        emailService.sendVerificationCode(email);
+        return ApiResponse.success(null, "인증 코드가 발송되었습니다.");
+    }
+
+    // 이메일 인증 코드 검증
+    public ApiResponse<Void> verifyEmailCode(String email, String code) {
+        if (!emailService.verifyCode(email, code)) {
+            return ApiResponse.fail("인증 코드가 올바르지 않습니다.");
+        }
+        return ApiResponse.success(null, "이메일 인증이 완료되었습니다.");
     }
 }

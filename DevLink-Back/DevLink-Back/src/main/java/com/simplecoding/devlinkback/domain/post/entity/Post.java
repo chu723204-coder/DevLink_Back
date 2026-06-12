@@ -55,6 +55,6 @@ public class Post extends BaseTimeEntity {
     }
 
     public enum Category {
-        FREE, INTERVIEW, TECH, INFO
+        FREE, INTERVIEW, TECH, JOB
     }
 }

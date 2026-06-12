@@ -1,0 +1,80 @@
+package com.simplecoding.devlinkback.domain.user.service;
+
+import com.simplecoding.devlinkback.domain.post.entity.Post;
+import com.simplecoding.devlinkback.domain.post.repository.PostRepository;
+import com.simplecoding.devlinkback.domain.study.entity.Study;
+import com.simplecoding.devlinkback.domain.study.repository.StudyRepository;
+import com.simplecoding.devlinkback.domain.user.entity.User;
+import com.simplecoding.devlinkback.domain.user.repository.UserRepository;
+import com.simplecoding.devlinkback.global.common.ApiResponse;
+import com.simplecoding.devlinkback.global.common.CommonException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final PostRepository postRepository;
+    private final StudyRepository studyRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    // 내 정보 조회
+    @Transactional(readOnly = true)
+    public ApiResponse<User> getMyInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> CommonException.notFound("유저를 찾을 수 없습니다."));
+        return ApiResponse.success(user, "내 정보 조회 성공");
+    }
+
+    // 닉네임 수정
+    @Transactional
+    public ApiResponse<User> updateNickname(Long userId, String nickname) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> CommonException.notFound("유저를 찾을 수 없습니다."));
+        user.updateNickname(nickname);
+        return ApiResponse.success(user, "닉네임 수정 성공");
+    }
+
+    // 비밀번호 수정
+    @Transactional
+    public ApiResponse<Void> updatePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> CommonException.notFound("유저를 찾을 수 없습니다."));
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw CommonException.badRequest("현재 비밀번호가 일치하지 않습니다.");
+        }
+        user.updatePassword(passwordEncoder.encode(newPassword));
+        return ApiResponse.success(null, "비밀번호 수정 성공");
+    }
+
+    // 회원 탈퇴
+    @Transactional
+    public ApiResponse<Void> deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> CommonException.notFound("유저를 찾을 수 없습니다."));
+        user.delete();
+        return ApiResponse.success(null, "회원 탈퇴 성공");
+    }
+
+    // 내 게시글 목록
+    @Transactional(readOnly = true)
+    public ApiResponse<List<Post>> getMyPosts(Long userId) {
+        List<Post> posts = postRepository
+                .findByUserIdAndDeleteYnOrderByCreatedAtDesc(userId, "N");
+        return ApiResponse.success(posts, "내 게시글 목록 조회 성공");
+    }
+
+    // 내 스터디 목록
+    @Transactional(readOnly = true)
+    public ApiResponse<List<Study>> getMyStudies(Long userId) {
+        List<Study> studies = studyRepository
+                .findByUserIdAndDeleteYnOrderByCreatedAtDesc(userId, "N");
+        return ApiResponse.success(studies, "내 스터디 목록 조회 성공");
+    }
+}

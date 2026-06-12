@@ -8,8 +8,10 @@ import com.simplecoding.devlinkback.domain.auth.repository.RefreshTokenRepositor
 import com.simplecoding.devlinkback.domain.user.entity.User;
 import com.simplecoding.devlinkback.domain.user.repository.UserRepository;
 import com.simplecoding.devlinkback.global.common.ApiResponse;
+import com.simplecoding.devlinkback.global.common.CommonException;
 import com.simplecoding.devlinkback.global.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,5 +135,22 @@ public class AuthService {
             return ApiResponse.fail("인증 코드가 올바르지 않습니다.");
         }
         return ApiResponse.success(null, "이메일 인증이 완료되었습니다.");
+    }
+
+    // 내 정보 조회
+    @Transactional(readOnly = true)
+    public ApiResponse<LoginResponse> getMyInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CommonException(
+                        HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        LoginResponse response = LoginResponse.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .nickname(user.getNickname())
+                .role(user.getRole().name())
+                .build();
+
+        return ApiResponse.success(response, "내 정보 조회 성공");
     }
 }

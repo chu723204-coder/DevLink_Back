@@ -61,4 +61,11 @@ public class AuthController {
             @RequestParam String code) {
         return ResponseEntity.ok(authService.verifyEmailCode(email, code));
     }
+
+    // 내 정보 조회
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<LoginResponse>> getMyInfo(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(authService.getMyInfo(userDetails.getUserId()));
+    }
 }

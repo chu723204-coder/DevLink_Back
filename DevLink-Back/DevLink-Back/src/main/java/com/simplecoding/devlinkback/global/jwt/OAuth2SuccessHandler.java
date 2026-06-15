@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -26,7 +27,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    // 프론트 리다이렉트 URL
+    @Value("${jwt.cookie-name}")
+    private String cookieName;
+
+    @Value("${jwt.cookie-max-age}")
+    private int cookieMaxAge;
+
     private static final String REDIRECT_URI = "http://localhost:5173/oauth2/redirect";
 
     @Override
@@ -36,18 +42,21 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
-        // 카카오/네이버 provider 확인
         String provider = determineProvider(oAuth2User);
         String providerId = determineProviderId(oAuth2User, provider);
 
+        // findByProviderAndProviderId 로 찾고 없으면 email 로 찾고 그것도 없으면 예외
         User user = userRepository.findByProviderAndProviderId(provider, providerId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseGet(() -> {
+                    // OAuth2Attributes 로 email 추출해서 재시도
+                    OAuth2Attributes attrs = OAuth2Attributes.of(provider, oAuth2User.getAttributes());
+                    return userRepository.findByEmail(attrs.getEmail())
+                            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                });
 
-        // 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(user.getUserId(), user.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
 
-        // Refresh Token 저장
         refreshTokenRepository.findByUserId(user.getUserId())
                 .ifPresentOrElse(
                         token -> token.updateToken(refreshToken),
@@ -59,15 +68,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                         )
                 );
 
-        // Refresh Token → HttpOnly Cookie
-        Cookie cookie = new Cookie("refreshToken", refreshToken);
+        Cookie cookie = new Cookie(cookieName, refreshToken);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false); // 배포 시 true
+        cookie.setSecure(false);
         cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+        cookie.setMaxAge(cookieMaxAge);
         response.addCookie(cookie);
 
-        // Access Token → 쿼리 파라미터로 프론트에 전달
         String redirectUrl = REDIRECT_URI + "?accessToken=" + accessToken;
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }

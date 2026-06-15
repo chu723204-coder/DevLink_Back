@@ -153,4 +153,12 @@ public class AuthService {
 
         return ApiResponse.success(response, "내 정보 조회 성공");
     }
+
+    // refreshToken 조회 (컨트롤러에서 쿠키 설정용)
+    @Transactional(readOnly = true)
+    public String getRefreshToken(Long userId) {
+        return refreshTokenRepository.findByUserId(userId)
+                .map(RefreshToken::getToken)
+                .orElse(null);
+    }
 }

@@ -51,9 +51,31 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                             || attributes.getEmail().endsWith("@naver.local");
                     if (!isFallbackEmail) {
                         return userRepository.findByEmail(attributes.getEmail())
-                                .orElseGet(() -> userRepository.save(attributes.toUser()));
+                                .orElseGet(() -> userRepository.save(
+                                        buildUserWithUniqueNickname(attributes)));
                     }
-                    return userRepository.save(attributes.toUser());
+                    return userRepository.save(buildUserWithUniqueNickname(attributes));
                 });
+    }
+
+    // 닉네임 중복 시 suffix 추가
+    private User buildUserWithUniqueNickname(OAuth2Attributes attributes) {
+        String nickname = attributes.getNickname();
+        String finalNickname = nickname;
+
+        // 닉네임 중복 체크 후 유니크하게 만들기
+        int suffix = 1;
+        while (userRepository.existsByNickname(finalNickname)) {
+            finalNickname = nickname + "_" + suffix;
+            suffix++;
+        }
+
+        return User.builder()
+                .email(attributes.getEmail())
+                .nickname(finalNickname)
+                .provider(attributes.getProvider())
+                .providerId(attributes.getProviderId())
+                .role(User.Role.ROLE_USER)
+                .build();
     }
 }

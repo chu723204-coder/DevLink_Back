@@ -48,7 +48,15 @@ public class OAuth2Attributes {
 
         String email = (String) response.getOrDefault("email",
                 response.get("id") + "@naver.local");
-        String nickname = (String) response.getOrDefault("nickname", "naver_" + response.get("id"));
+
+        // 네이버는 nickname 대신 name 제공
+        String nickname = (String) response.get("nickname");
+        if (nickname == null || nickname.isBlank()) {
+            nickname = (String) response.get("name");
+        }
+        if (nickname == null || nickname.isBlank()) {
+            nickname = "naver_" + response.get("id");
+        }
 
         return OAuth2Attributes.builder()
                 .provider("naver")

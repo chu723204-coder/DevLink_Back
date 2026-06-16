@@ -1,7 +1,7 @@
 package com.simplecoding.devlinkback.domain.user.controller;
 
-import com.simplecoding.devlinkback.domain.post.entity.Post;
-import com.simplecoding.devlinkback.domain.study.entity.Study;
+import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
+import com.simplecoding.devlinkback.domain.study.dto.StudyResponseDto;
 import com.simplecoding.devlinkback.domain.user.entity.User;
 import com.simplecoding.devlinkback.domain.user.service.UserService;
 import com.simplecoding.devlinkback.global.common.ApiResponse;
@@ -55,14 +55,14 @@ public class UserController {
 
     // 내 게시글 목록
     @GetMapping("/me/posts")
-    public ResponseEntity<ApiResponse<List<Post>>> getMyPosts(
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getMyPosts(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(userService.getMyPosts(userDetails.getUserId()));
     }
 
     // 내 스터디 목록
     @GetMapping("/me/studies")
-    public ResponseEntity<ApiResponse<List<Study>>> getMyStudies(
+    public ResponseEntity<ApiResponse<List<StudyResponseDto>>> getMyStudies(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(userService.getMyStudies(userDetails.getUserId()));
     }

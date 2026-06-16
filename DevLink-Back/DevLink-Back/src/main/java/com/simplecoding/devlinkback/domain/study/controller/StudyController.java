@@ -1,6 +1,7 @@
 package com.simplecoding.devlinkback.domain.study.controller;
 
-import com.simplecoding.devlinkback.domain.study.entity.Study;
+import com.simplecoding.devlinkback.domain.study.dto.StudyApplyResponseDto;
+import com.simplecoding.devlinkback.domain.study.dto.StudyResponseDto;
 import com.simplecoding.devlinkback.domain.study.entity.StudyApply;
 import com.simplecoding.devlinkback.domain.study.service.StudyService;
 import com.simplecoding.devlinkback.global.common.ApiResponse;
@@ -19,11 +20,9 @@ public class StudyController {
 
     private final StudyService studyService;
 
-    // ── 스터디 ────────────────────────────────────────────────
-
     // 스터디 전체 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Study>>> getStudies(
+    public ResponseEntity<ApiResponse<List<StudyResponseDto>>> getStudies(
             @RequestParam(required = false) Boolean openOnly) {
         if (Boolean.TRUE.equals(openOnly)) {
             return ResponseEntity.ok(studyService.getOpenStudies());
@@ -33,14 +32,14 @@ public class StudyController {
 
     // 스터디 상세 조회
     @GetMapping("/{studyId}")
-    public ResponseEntity<ApiResponse<Study>> getStudy(
+    public ResponseEntity<ApiResponse<StudyResponseDto>> getStudy(
             @PathVariable Long studyId) {
         return ResponseEntity.ok(studyService.getStudy(studyId));
     }
 
     // 스터디 등록
     @PostMapping
-    public ResponseEntity<ApiResponse<Study>> createStudy(
+    public ResponseEntity<ApiResponse<StudyResponseDto>> createStudy(
             @RequestParam String title,
             @RequestParam String description,
             @RequestParam(required = false) String techStacks,
@@ -54,7 +53,7 @@ public class StudyController {
 
     // 스터디 수정
     @PutMapping("/{studyId}")
-    public ResponseEntity<ApiResponse<Study>> updateStudy(
+    public ResponseEntity<ApiResponse<StudyResponseDto>> updateStudy(
             @PathVariable Long studyId,
             @RequestParam String title,
             @RequestParam String description,
@@ -85,11 +84,9 @@ public class StudyController {
                 studyService.closeStudy(studyId, userDetails.getUserId()));
     }
 
-    // ── 지원 ──────────────────────────────────────────────────
-
     // 지원자 목록 조회
     @GetMapping("/{studyId}/applies")
-    public ResponseEntity<ApiResponse<List<StudyApply>>> getApplies(
+    public ResponseEntity<ApiResponse<List<StudyApplyResponseDto>>> getApplies(
             @PathVariable Long studyId) {
         return ResponseEntity.ok(studyService.getApplies(studyId));
     }

@@ -1,5 +1,7 @@
 package com.simplecoding.devlinkback.domain.chat.service;
 
+import com.simplecoding.devlinkback.domain.chat.dto.ChatRoomDto;
+import com.simplecoding.devlinkback.domain.chat.dto.MessageDto;
 import com.simplecoding.devlinkback.domain.chat.entity.ChatRoom;
 import com.simplecoding.devlinkback.domain.chat.entity.ChatRoomMember;
 import com.simplecoding.devlinkback.domain.chat.entity.Message;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +28,6 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
 
-    // ── 채팅방 생성 ──────────────────────────────────────────
     @Transactional
     public ApiResponse<ChatRoom> createChatRoom(Long studyId, String roomName) {
         return chatRoomRepository.findByStudyId(studyId)
@@ -35,33 +37,34 @@ public class ChatService {
                             .studyId(studyId)
                             .roomName(roomName)
                             .build();
-                    return ApiResponse.success(
-                            chatRoomRepository.save(chatRoom), "채팅방 생성 성공");
+                    return ApiResponse.success(chatRoomRepository.save(chatRoom), "채팅방 생성 성공");
                 });
     }
 
-    // ── 채팅방 전체 목록 조회 ─────────────────────────────────
     @Transactional(readOnly = true)
     public ApiResponse<List<ChatRoom>> getChatRooms() {
-        List<ChatRoom> rooms = chatRoomRepository.findByDeleteYn("N");
-        return ApiResponse.success(rooms, "채팅방 목록 조회 성공");
+        return ApiResponse.success(chatRoomRepository.findByDeleteYn("N"), "채팅방 목록 조회 성공");
     }
 
-    // ── 내가 참여 중인 채팅방 목록 조회 ─────────────────────────
     @Transactional(readOnly = true)
-    public ApiResponse<List<ChatRoomMember>> getMyChatRooms(Long userId) {
-        List<ChatRoomMember> members = chatRoomMemberRepository.findByUser_UserId(userId);
-        return ApiResponse.success(members, "내 채팅방 목록 조회 성공");
+    public ApiResponse<List<ChatRoomDto>> getMyChatRooms(Long userId) {
+        List<ChatRoomDto> rooms = chatRoomMemberRepository.findByUser_UserId(userId)
+                .stream()
+                .map(member -> ChatRoomDto.builder()
+                        .roomId(member.getChatRoom().getChatRoomId())
+                        .roomName(member.getChatRoom().getRoomName())
+                        .studyId(member.getChatRoom().getStudyId())
+                        .build())
+                .collect(Collectors.toList());
+        return ApiResponse.success(rooms, "내 채팅방 목록 조회 성공");
     }
 
-    // ── 채팅방 참여자 목록 조회 ──────────────────────────────
     @Transactional(readOnly = true)
     public ApiResponse<List<ChatRoomMember>> getChatRoomMembers(Long chatRoomId) {
-        List<ChatRoomMember> members = chatRoomMemberRepository.findByChatRoom_ChatRoomId(chatRoomId);
-        return ApiResponse.success(members, "채팅방 참여자 조회 성공");
+        return ApiResponse.success(
+                chatRoomMemberRepository.findByChatRoom_ChatRoomId(chatRoomId), "채팅방 참여자 조회 성공");
     }
 
-    // ── 채팅방 참여 ──────────────────────────────────────────
     @Transactional
     public ApiResponse<ChatRoomMember> joinChatRoom(Long chatRoomId, Long userId) {
         if (chatRoomMemberRepository.existsByChatRoom_ChatRoomIdAndUser_UserId(chatRoomId, userId)) {
@@ -78,7 +81,6 @@ public class ChatService {
         return ApiResponse.success(chatRoomMemberRepository.save(member), "채팅방 참여 성공");
     }
 
-    // ── 채팅방 퇴장 ──────────────────────────────────────────
     @Transactional
     public ApiResponse<Void> leaveChatRoom(Long chatRoomId, Long userId) {
         ChatRoomMember member = chatRoomMemberRepository
@@ -88,9 +90,8 @@ public class ChatService {
         return ApiResponse.success(null, "채팅방 퇴장 성공");
     }
 
-    // ── 메시지 저장 ──────────────────────────────────────────
     @Transactional
-    public Message saveMessage(Long chatRoomId, Long senderId, String content) {
+    public MessageDto saveMessage(Long chatRoomId, Long senderId, String content) {
         if (!chatRoomMemberRepository.existsByChatRoom_ChatRoomIdAndUser_UserId(chatRoomId, senderId)) {
             throw CommonException.forbidden("채팅방 참여자만 메시지를 보낼 수 있습니다.");
         }
@@ -99,22 +100,51 @@ public class ChatService {
                 .senderId(senderId)
                 .content(content)
                 .build();
-        return messageRepository.save(message);
+        Message saved = messageRepository.save(message);
+
+        String nickname = userRepository.findById(senderId)
+                .map(User::getNickname)
+                .orElse("알 수 없음");
+
+        return MessageDto.builder()
+                .messageId(saved.getMessageId())
+                .chatRoomId(saved.getChatRoomId())
+                .senderId(saved.getSenderId())
+                .nickname(nickname)
+                .content(saved.getContent())
+                .isRead(saved.getIsRead())
+                .createdAt(saved.getCreatedAt())
+                .updatedAt(saved.getUpdatedAt())
+                .build();
     }
 
-    // ── 메시지 내역 조회 ──────────────────────────────────────
     @Transactional(readOnly = true)
-    public ApiResponse<List<Message>> getMessages(Long chatRoomId) {
-        List<Message> messages =
-                messageRepository.findByChatRoomIdOrderByCreatedAtAsc(chatRoomId);
+    public ApiResponse<List<MessageDto>> getMessages(Long chatRoomId) {
+        List<MessageDto> messages = messageRepository.findByChatRoomIdOrderByCreatedAtAsc(chatRoomId)
+                .stream()
+                .map(m -> {
+                    String nickname = userRepository.findById(m.getSenderId())
+                            .map(User::getNickname)
+                            .orElse("알 수 없음");
+                    return MessageDto.builder()
+                            .messageId(m.getMessageId())
+                            .chatRoomId(m.getChatRoomId())
+                            .senderId(m.getSenderId())
+                            .nickname(nickname)
+                            .content(m.getContent())
+                            .isRead(m.getIsRead())
+                            .createdAt(m.getCreatedAt())
+                            .updatedAt(m.getUpdatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
         return ApiResponse.success(messages, "메시지 내역 조회 성공");
     }
 
-    // ── 읽지 않은 메시지 수 ───────────────────────────────────
     @Transactional(readOnly = true)
     public ApiResponse<Long> getUnreadCount(Long chatRoomId, Long userId) {
-        Long count = messageRepository
-                .countByChatRoomIdAndSenderIdNotAndIsRead(chatRoomId, userId, false);
-        return ApiResponse.success(count, "읽지 않은 메시지 수 조회 성공");
+        return ApiResponse.success(
+                messageRepository.countByChatRoomIdAndSenderIdNotAndIsRead(chatRoomId, userId, false),
+                "읽지 않은 메시지 수 조회 성공");
     }
 }

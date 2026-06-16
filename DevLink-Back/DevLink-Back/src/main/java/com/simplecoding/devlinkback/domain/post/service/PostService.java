@@ -1,11 +1,13 @@
 package com.simplecoding.devlinkback.domain.post.service;
 
+import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
 import com.simplecoding.devlinkback.domain.post.entity.Comment;
 import com.simplecoding.devlinkback.domain.post.entity.Post;
 import com.simplecoding.devlinkback.domain.post.entity.PostLike;
 import com.simplecoding.devlinkback.domain.post.repository.CommentRepository;
 import com.simplecoding.devlinkback.domain.post.repository.PostLikeRepository;
 import com.simplecoding.devlinkback.domain.post.repository.PostRepository;
+import com.simplecoding.devlinkback.domain.user.repository.UserRepository;
 import com.simplecoding.devlinkback.global.common.ApiResponse;
 import com.simplecoding.devlinkback.global.common.CommonException;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,55 +24,78 @@ public class PostService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
+    private final UserRepository userRepository;
 
-    // ── 게시글 ────────────────────────────────────────────────
+    // Post → PostResponseDto 변환
+    private PostResponseDto toDto(Post post) {
+        String nickname = userRepository.findById(post.getUserId())
+                .map(u -> u.getNickname())
+                .orElse("알 수 없음");
+        int likeCount = (int) postLikeRepository.countByPostId(post.getPostId());
+        int commentCount = (int) commentRepository.countByPostIdAndDeleteYn(post.getPostId(), "N");
+
+        return PostResponseDto.builder()
+                .postId(post.getPostId())
+                .title(post.getTitle())
+                .content(post.getContent())
+                .category(post.getCategory())
+                .nickname(nickname)
+                .viewCount(post.getViewCount())
+                .likeCount(likeCount)
+                .commentCount(commentCount)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+    }
 
     // 게시글 전체 목록 조회
     @Transactional(readOnly = true)
-    public ApiResponse<List<Post>> getPosts() {
-        List<Post> posts = postRepository.findByDeleteYnOrderByCreatedAtDesc("N");
+    public ApiResponse<List<PostResponseDto>> getPosts() {
+        List<PostResponseDto> posts = postRepository.findByDeleteYnOrderByCreatedAtDesc("N")
+                .stream().map(this::toDto).collect(Collectors.toList());
         return ApiResponse.success(posts, "게시글 목록 조회 성공");
     }
 
     // 카테고리별 게시글 목록 조회
     @Transactional(readOnly = true)
-    public ApiResponse<List<Post>> getPostsByCategory(Post.Category category) {
-        List<Post> posts = postRepository
-                .findByCategoryAndDeleteYnOrderByCreatedAtDesc(category, "N");
+    public ApiResponse<List<PostResponseDto>> getPostsByCategory(Post.Category category) {
+        List<PostResponseDto> posts = postRepository
+                .findByCategoryAndDeleteYnOrderByCreatedAtDesc(category, "N")
+                .stream().map(this::toDto).collect(Collectors.toList());
         return ApiResponse.success(posts, "카테고리별 게시글 목록 조회 성공");
     }
 
     // 게시글 상세 조회
     @Transactional
-    public ApiResponse<Post> getPost(Long postId) {
+    public ApiResponse<PostResponseDto> getPost(Long postId) {
         Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
                 .orElseThrow(() -> CommonException.notFound("게시글을 찾을 수 없습니다."));
         post.increaseViewCount();
-        return ApiResponse.success(post, "게시글 상세 조회 성공");
+        return ApiResponse.success(toDto(post), "게시글 상세 조회 성공");
     }
 
     // 게시글 작성
     @Transactional
-    public ApiResponse<Post> createPost(Long userId, String title, String content, Post.Category category) {
+    public ApiResponse<PostResponseDto> createPost(Long userId, String title, String content, Post.Category category) {
         Post post = Post.builder()
                 .userId(userId)
                 .title(title)
                 .content(content)
                 .category(category)
                 .build();
-        return ApiResponse.success(postRepository.save(post), "게시글 작성 성공");
+        return ApiResponse.success(toDto(postRepository.save(post)), "게시글 작성 성공");
     }
 
     // 게시글 수정
     @Transactional
-    public ApiResponse<Post> updatePost(Long postId, Long userId, String title, String content, Post.Category category) {
+    public ApiResponse<PostResponseDto> updatePost(Long postId, Long userId, String title, String content, Post.Category category) {
         Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
                 .orElseThrow(() -> CommonException.notFound("게시글을 찾을 수 없습니다."));
         if (!post.getUserId().equals(userId)) {
             throw CommonException.forbidden("게시글 수정 권한이 없습니다.");
         }
         post.update(title, content, category);
-        return ApiResponse.success(post, "게시글 수정 성공");
+        return ApiResponse.success(toDto(post), "게시글 수정 성공");
     }
 
     // 게시글 삭제
@@ -83,8 +109,6 @@ public class PostService {
         post.delete();
         return ApiResponse.success(null, "게시글 삭제 성공");
     }
-
-    // ── 좋아요 ────────────────────────────────────────────────
 
     // 좋아요 토글
     @Transactional
@@ -106,8 +130,6 @@ public class PostService {
             return ApiResponse.success(null, "좋아요 성공");
         }
     }
-
-    // ── 댓글 ──────────────────────────────────────────────────
 
     // 댓글 목록 조회
     @Transactional(readOnly = true)

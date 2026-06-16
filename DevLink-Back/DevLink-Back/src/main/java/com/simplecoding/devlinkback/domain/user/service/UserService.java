@@ -1,8 +1,10 @@
 package com.simplecoding.devlinkback.domain.user.service;
 
-import com.simplecoding.devlinkback.domain.post.entity.Post;
+import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
+import com.simplecoding.devlinkback.domain.post.repository.CommentRepository;
+import com.simplecoding.devlinkback.domain.post.repository.PostLikeRepository;
 import com.simplecoding.devlinkback.domain.post.repository.PostRepository;
-import com.simplecoding.devlinkback.domain.study.entity.Study;
+import com.simplecoding.devlinkback.domain.study.dto.StudyResponseDto;
 import com.simplecoding.devlinkback.domain.study.repository.StudyRepository;
 import com.simplecoding.devlinkback.domain.user.entity.User;
 import com.simplecoding.devlinkback.domain.user.repository.UserRepository;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final CommentRepository commentRepository;
     private final StudyRepository studyRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -64,17 +69,52 @@ public class UserService {
 
     // 내 게시글 목록
     @Transactional(readOnly = true)
-    public ApiResponse<List<Post>> getMyPosts(Long userId) {
-        List<Post> posts = postRepository
-                .findByUserIdAndDeleteYnOrderByCreatedAtDesc(userId, "N");
+    public ApiResponse<List<PostResponseDto>> getMyPosts(Long userId) {
+        String nickname = userRepository.findById(userId)
+                .map(User::getNickname).orElse("알 수 없음");
+
+        List<PostResponseDto> posts = postRepository
+                .findByUserIdAndDeleteYnOrderByCreatedAtDesc(userId, "N")
+                .stream()
+                .map(post -> PostResponseDto.builder()
+                        .postId(post.getPostId())
+                        .title(post.getTitle())
+                        .content(post.getContent())
+                        .category(post.getCategory())
+                        .nickname(nickname)
+                        .viewCount(post.getViewCount())
+                        .likeCount((int) postLikeRepository.countByPostId(post.getPostId()))
+                        .commentCount((int) commentRepository.countByPostIdAndDeleteYn(post.getPostId(), "N"))
+                        .createdAt(post.getCreatedAt())
+                        .updatedAt(post.getUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
         return ApiResponse.success(posts, "내 게시글 목록 조회 성공");
     }
 
     // 내 스터디 목록
     @Transactional(readOnly = true)
-    public ApiResponse<List<Study>> getMyStudies(Long userId) {
-        List<Study> studies = studyRepository
-                .findByUserIdAndDeleteYnOrderByCreatedAtDesc(userId, "N");
+    public ApiResponse<List<StudyResponseDto>> getMyStudies(Long userId) {
+        String nickname = userRepository.findById(userId)
+                .map(User::getNickname).orElse("알 수 없음");
+
+        List<StudyResponseDto> studies = studyRepository
+                .findByUserIdAndDeleteYnOrderByCreatedAtDesc(userId, "N")
+                .stream()
+                .map(study -> StudyResponseDto.builder()
+                        .studyId(study.getStudyId())
+                        .title(study.getTitle())
+                        .description(study.getDescription())
+                        .techStacks(study.getTechStacks())
+                        .maxMembers(study.getMaxMembers())
+                        .currentMembers(study.getCurrentMembers())
+                        .deadline(study.getDeadline())
+                        .status(study.getStatus())
+                        .nickname(nickname)
+                        .createdAt(study.getCreatedAt())
+                        .updatedAt(study.getUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
         return ApiResponse.success(studies, "내 스터디 목록 조회 성공");
     }
 }

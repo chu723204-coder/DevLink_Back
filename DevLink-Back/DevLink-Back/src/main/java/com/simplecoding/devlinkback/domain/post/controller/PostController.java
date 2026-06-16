@@ -1,5 +1,6 @@
 package com.simplecoding.devlinkback.domain.post.controller;
 
+import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
 import com.simplecoding.devlinkback.domain.post.entity.Comment;
 import com.simplecoding.devlinkback.domain.post.entity.Post;
 import com.simplecoding.devlinkback.domain.post.service.PostService;
@@ -19,11 +20,9 @@ public class PostController {
 
     private final PostService postService;
 
-    // ── 게시글 ────────────────────────────────────────────────
-
     // 게시글 전체 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Post>>> getPosts(
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getPosts(
             @RequestParam(required = false) Post.Category category) {
         if (category != null) {
             return ResponseEntity.ok(postService.getPostsByCategory(category));
@@ -33,14 +32,14 @@ public class PostController {
 
     // 게시글 상세 조회
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse<Post>> getPost(
+    public ResponseEntity<ApiResponse<PostResponseDto>> getPost(
             @PathVariable Long postId) {
         return ResponseEntity.ok(postService.getPost(postId));
     }
 
     // 게시글 작성
     @PostMapping
-    public ResponseEntity<ApiResponse<Post>> createPost(
+    public ResponseEntity<ApiResponse<PostResponseDto>> createPost(
             @RequestParam String title,
             @RequestParam String content,
             @RequestParam Post.Category category,
@@ -51,7 +50,7 @@ public class PostController {
 
     // 게시글 수정
     @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponse<Post>> updatePost(
+    public ResponseEntity<ApiResponse<PostResponseDto>> updatePost(
             @PathVariable Long postId,
             @RequestParam String title,
             @RequestParam String content,
@@ -70,8 +69,6 @@ public class PostController {
                 postService.deletePost(postId, userDetails.getUserId()));
     }
 
-    // ── 좋아요 ────────────────────────────────────────────────
-
     // 좋아요 토글
     @PostMapping("/{postId}/like")
     public ResponseEntity<ApiResponse<Void>> toggleLike(
@@ -80,8 +77,6 @@ public class PostController {
         return ResponseEntity.ok(
                 postService.toggleLike(postId, userDetails.getUserId()));
     }
-
-    // ── 댓글 ──────────────────────────────────────────────────
 
     // 댓글 목록 조회
     @GetMapping("/{postId}/comments")

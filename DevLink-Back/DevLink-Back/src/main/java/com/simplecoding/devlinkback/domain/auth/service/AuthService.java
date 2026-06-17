@@ -29,10 +29,11 @@ public class AuthService {
     // 회원가입
     @Transactional
     public ApiResponse<Void> signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        // ✅ 탈퇴한 유저 재가입 허용 - 활성 유저만 중복 체크
+        if (userRepository.existsByEmailAndDeleteYn(request.getEmail(), "N")) {
             return ApiResponse.fail("이미 사용 중인 이메일입니다.");
         }
-        if (userRepository.existsByNickname(request.getNickname())) {
+        if (userRepository.existsByNicknameAndDeleteYn(request.getNickname(), "N")) {
             return ApiResponse.fail("이미 사용 중인 닉네임입니다.");
         }
 
@@ -122,7 +123,8 @@ public class AuthService {
 
     // 이메일 인증 코드 발송
     public ApiResponse<Void> sendEmailCode(String email) {
-        if (userRepository.existsByEmail(email)) {
+        // ✅ 탈퇴한 유저 재가입 허용 - 활성 유저만 중복 체크
+        if (userRepository.existsByEmailAndDeleteYn(email, "N")) {
             return ApiResponse.fail("이미 사용 중인 이메일입니다.");
         }
         emailService.sendVerificationCode(email);

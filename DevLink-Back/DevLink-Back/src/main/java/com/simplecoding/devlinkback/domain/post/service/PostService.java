@@ -1,5 +1,6 @@
 package com.simplecoding.devlinkback.domain.post.service;
 
+import com.simplecoding.devlinkback.domain.post.dto.CommentResponseDto;
 import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
 import com.simplecoding.devlinkback.domain.post.entity.Comment;
 import com.simplecoding.devlinkback.domain.post.entity.Post;
@@ -45,6 +46,20 @@ public class PostService {
                 .commentCount(commentCount)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
+                .build();
+    }
+
+    // Comment → CommentResponseDto 변환
+    private CommentResponseDto toCommentDto(Comment comment) {
+        String nickname = userRepository.findById(comment.getUserId())
+                .map(u -> u.getNickname())
+                .orElse("알 수 없음");
+        return CommentResponseDto.builder()
+                .commentId(comment.getCommentId())
+                .userId(comment.getUserId())
+                .nickname(nickname)
+                .content(comment.getContent())
+                .createdAt(comment.getCreatedAt())
                 .build();
     }
 
@@ -131,17 +146,20 @@ public class PostService {
         }
     }
 
-    // 댓글 목록 조회
+    // ✅ 댓글 목록 조회 - nickname 포함 DTO 반환
     @Transactional(readOnly = true)
-    public ApiResponse<List<Comment>> getComments(Long postId) {
-        List<Comment> comments = commentRepository
-                .findByPostIdAndDeleteYnOrderByCreatedAtAsc(postId, "N");
+    public ApiResponse<List<CommentResponseDto>> getComments(Long postId) {
+        List<CommentResponseDto> comments = commentRepository
+                .findByPostIdAndDeleteYnOrderByCreatedAtAsc(postId, "N")
+                .stream()
+                .map(this::toCommentDto)
+                .collect(Collectors.toList());
         return ApiResponse.success(comments, "댓글 목록 조회 성공");
     }
 
-    // 댓글 작성
+    // ✅ 댓글 작성 - nickname 포함 DTO 반환
     @Transactional
-    public ApiResponse<Comment> createComment(Long postId, Long userId, String content) {
+    public ApiResponse<CommentResponseDto> createComment(Long postId, Long userId, String content) {
         postRepository.findByPostIdAndDeleteYn(postId, "N")
                 .orElseThrow(() -> CommonException.notFound("게시글을 찾을 수 없습니다."));
         Comment comment = Comment.builder()
@@ -149,19 +167,20 @@ public class PostService {
                 .userId(userId)
                 .content(content)
                 .build();
-        return ApiResponse.success(commentRepository.save(comment), "댓글 작성 성공");
+        Comment saved = commentRepository.save(comment);
+        return ApiResponse.success(toCommentDto(saved), "댓글 작성 성공");
     }
 
     // 댓글 수정
     @Transactional
-    public ApiResponse<Comment> updateComment(Long commentId, Long userId, String content) {
+    public ApiResponse<CommentResponseDto> updateComment(Long commentId, Long userId, String content) {
         Comment comment = commentRepository.findByCommentIdAndDeleteYn(commentId, "N")
                 .orElseThrow(() -> CommonException.notFound("댓글을 찾을 수 없습니다."));
         if (!comment.getUserId().equals(userId)) {
             throw CommonException.forbidden("댓글 수정 권한이 없습니다.");
         }
         comment.update(content);
-        return ApiResponse.success(comment, "댓글 수정 성공");
+        return ApiResponse.success(toCommentDto(comment), "댓글 수정 성공");
     }
 
     // 댓글 삭제

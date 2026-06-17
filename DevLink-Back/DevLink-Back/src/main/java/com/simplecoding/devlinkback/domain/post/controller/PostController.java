@@ -1,7 +1,7 @@
 package com.simplecoding.devlinkback.domain.post.controller;
 
+import com.simplecoding.devlinkback.domain.post.dto.CommentResponseDto;
 import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
-import com.simplecoding.devlinkback.domain.post.entity.Comment;
 import com.simplecoding.devlinkback.domain.post.entity.Post;
 import com.simplecoding.devlinkback.domain.post.service.PostService;
 import com.simplecoding.devlinkback.global.common.ApiResponse;
@@ -78,16 +78,16 @@ public class PostController {
                 postService.toggleLike(postId, userDetails.getUserId()));
     }
 
-    // 댓글 목록 조회
+    // ✅ 댓글 목록 조회 - CommentResponseDto 반환
     @GetMapping("/{postId}/comments")
-    public ResponseEntity<ApiResponse<List<Comment>>> getComments(
+    public ResponseEntity<ApiResponse<List<CommentResponseDto>>> getComments(
             @PathVariable Long postId) {
         return ResponseEntity.ok(postService.getComments(postId));
     }
 
-    // 댓글 작성
+    // ✅ 댓글 작성 - CommentResponseDto 반환
     @PostMapping("/{postId}/comments")
-    public ResponseEntity<ApiResponse<Comment>> createComment(
+    public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
             @PathVariable Long postId,
             @RequestParam String content,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -97,7 +97,7 @@ public class PostController {
 
     // 댓글 수정
     @PutMapping("/comments/{commentId}")
-    public ResponseEntity<ApiResponse<Comment>> updateComment(
+    public ResponseEntity<ApiResponse<CommentResponseDto>> updateComment(
             @PathVariable Long commentId,
             @RequestParam String content,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

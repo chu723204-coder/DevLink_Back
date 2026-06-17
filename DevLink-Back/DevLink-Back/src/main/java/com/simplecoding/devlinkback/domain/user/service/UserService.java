@@ -58,12 +58,20 @@ public class UserService {
         return ApiResponse.success(null, "비밀번호 수정 성공");
     }
 
-    // 회원 탈퇴
+    // 회원 탈퇴 - ✅ 이메일 익명화 처리 (재가입 허용)
     @Transactional
     public ApiResponse<Void> deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> CommonException.notFound("유저를 찾을 수 없습니다."));
+
+        // 이메일 익명화: deleted_{userId}_{원래이메일}
+        String anonymizedEmail = "deleted_" + userId + "_" + user.getEmail();
+        // 닉네임 익명화: deleted_{userId} (닉네임도 UNIQUE라 변경 필요)
+        String anonymizedNickname = "deleted_" + userId;
+
+        user.anonymize(anonymizedEmail, anonymizedNickname);
         user.delete();
+
         return ApiResponse.success(null, "회원 탈퇴 성공");
     }
 

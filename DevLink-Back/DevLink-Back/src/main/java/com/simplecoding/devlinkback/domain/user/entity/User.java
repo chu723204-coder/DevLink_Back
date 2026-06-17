@@ -54,6 +54,12 @@ public class User extends BaseTimeEntity {
         this.deleteYn = "Y";
     }
 
+    // ✅ 탈퇴 시 이메일/닉네임 익명화
+    public void anonymize(String email, String nickname) {
+        this.email = email;
+        this.nickname = nickname;
+    }
+
     @Getter
     public enum Role {
         ROLE_USER, ROLE_ADMIN

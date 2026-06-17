@@ -16,4 +16,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByNickname(String nickname);
+
+    // ✅ 탈퇴 여부 포함 중복 체크 (재가입 허용용)
+    boolean existsByEmailAndDeleteYn(String email, String deleteYn);
+
+    boolean existsByNicknameAndDeleteYn(String nickname, String deleteYn);
 }

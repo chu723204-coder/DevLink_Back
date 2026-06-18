@@ -4,6 +4,8 @@ import com.simplecoding.devlinkback.domain.chat.entity.ChatRoom;
 import com.simplecoding.devlinkback.domain.chat.entity.ChatRoomMember;
 import com.simplecoding.devlinkback.domain.chat.repository.ChatRoomMemberRepository;
 import com.simplecoding.devlinkback.domain.chat.repository.ChatRoomRepository;
+import com.simplecoding.devlinkback.domain.notification.entity.Notification;
+import com.simplecoding.devlinkback.domain.notification.service.NotificationService;
 import com.simplecoding.devlinkback.domain.study.dto.StudyApplyResponseDto;
 import com.simplecoding.devlinkback.domain.study.dto.StudyResponseDto;
 import com.simplecoding.devlinkback.domain.study.entity.Study;
@@ -30,6 +32,7 @@ public class StudyService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private StudyResponseDto toDto(Study study) {
         String nickname = userRepository.findById(study.getUserId())
@@ -109,7 +112,6 @@ public class StudyService {
         }
         study.delete();
 
-        // 연관 채팅방 삭제
         chatRoomRepository.findByStudyId(studyId).ifPresent(chatRoom -> {
             chatRoomMemberRepository.deleteByChatRoom_ChatRoomId(chatRoom.getChatRoomId());
             chatRoomRepository.delete(chatRoom);
@@ -163,7 +165,19 @@ public class StudyService {
                 .studyId(studyId)
                 .userId(userId)
                 .build();
-        return ApiResponse.success(studyApplyRepository.save(apply), "지원 성공");
+        StudyApply saved = studyApplyRepository.save(apply);
+
+        // 스터디 모집자에게 지원 알림
+        String applicantNickname = userRepository.findById(userId)
+                .map(u -> u.getNickname()).orElse("누군가");
+        notificationService.sendNotification(
+                study.getUserId(),
+                Notification.NotificationType.STUDY_APPLY,
+                applicantNickname + "님이 '" + study.getTitle() + "' 스터디에 지원했습니다.",
+                "/studies/" + studyId
+        );
+
+        return ApiResponse.success(saved, "지원 성공");
     }
 
     @Transactional
@@ -191,23 +205,25 @@ public class StudyService {
                 .orElseThrow(() -> CommonException.notFound("유저를 찾을 수 없습니다."));
         if (!chatRoomMemberRepository.existsByChatRoom_ChatRoomIdAndUser_UserId(
                 chatRoom.getChatRoomId(), userId)) {
-            ChatRoomMember ownerMember = ChatRoomMember.builder()
-                    .chatRoom(chatRoom)
-                    .user(owner)
-                    .build();
-            chatRoomMemberRepository.save(ownerMember);
+            chatRoomMemberRepository.save(ChatRoomMember.builder()
+                    .chatRoom(chatRoom).user(owner).build());
         }
 
         User applicant = userRepository.findById(apply.getUserId())
                 .orElseThrow(() -> CommonException.notFound("지원자를 찾을 수 없습니다."));
         if (!chatRoomMemberRepository.existsByChatRoom_ChatRoomIdAndUser_UserId(
                 chatRoom.getChatRoomId(), apply.getUserId())) {
-            ChatRoomMember applicantMember = ChatRoomMember.builder()
-                    .chatRoom(chatRoom)
-                    .user(applicant)
-                    .build();
-            chatRoomMemberRepository.save(applicantMember);
+            chatRoomMemberRepository.save(ChatRoomMember.builder()
+                    .chatRoom(chatRoom).user(applicant).build());
         }
+
+        // 지원자에게 수락 알림
+        notificationService.sendNotification(
+                apply.getUserId(),
+                Notification.NotificationType.STUDY_ACCEPT,
+                "'" + study.getTitle() + "' 스터디 지원이 수락되었습니다.",
+                "/studies/" + study.getStudyId()
+        );
 
         return ApiResponse.success(null, "지원 수락 성공");
     }
@@ -222,6 +238,15 @@ public class StudyService {
             throw CommonException.forbidden("거절 권한이 없습니다.");
         }
         apply.reject();
+
+        // 지원자에게 거절 알림
+        notificationService.sendNotification(
+                apply.getUserId(),
+                Notification.NotificationType.STUDY_REJECT,
+                "'" + study.getTitle() + "' 스터디 지원이 거절되었습니다.",
+                "/studies/" + study.getStudyId()
+        );
+
         return ApiResponse.success(null, "지원 거절 성공");
     }
 }

@@ -33,13 +33,13 @@ public class Notification extends BaseTimeEntity {
     @Builder.Default
     private Boolean isRead = false;
 
-    // 읽음 처리
     public void read() {
         this.isRead = true;
     }
 
     public enum NotificationType {
         COMMENT,        // 댓글 알림
+        LIKE,           // 좋아요 알림
         STUDY_APPLY,    // 스터디 지원 알림
         STUDY_ACCEPT,   // 스터디 수락 알림
         STUDY_REJECT    // 스터디 거절 알림

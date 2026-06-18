@@ -20,4 +20,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     // 특정 유저의 게시글 목록 (최신순)
     List<Post> findByUserIdAndDeleteYnOrderByCreatedAtDesc(Long userId, String deleteYn);
+
+    // ✅ 관리자 - 통계용
+    long countByDeleteYn(String deleteYn);
 }

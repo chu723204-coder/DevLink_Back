@@ -39,6 +39,10 @@ public class User extends BaseTimeEntity {
     @Builder.Default
     private String deleteYn = "N";
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean banned = false;  // ✅ 계정 정지 필드 추가
+
     // 닉네임 수정
     public void updateNickname(String nickname) {
         this.nickname = nickname;
@@ -54,10 +58,15 @@ public class User extends BaseTimeEntity {
         this.deleteYn = "Y";
     }
 
-    // ✅ 탈퇴 시 이메일/닉네임 익명화
+    // 탈퇴 시 이메일/닉네임 익명화
     public void anonymize(String email, String nickname) {
         this.email = email;
         this.nickname = nickname;
+    }
+
+    // ✅ 계정 정지/해제 토글
+    public void toggleBan() {
+        this.banned = !this.banned;
     }
 
     @Getter

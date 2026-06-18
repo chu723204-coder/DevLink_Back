@@ -20,4 +20,7 @@ public interface StudyRepository extends JpaRepository<Study, Long> {
 
     // 특정 유저의 스터디 목록 (최신순)
     List<Study> findByUserIdAndDeleteYnOrderByCreatedAtDesc(Long userId, String deleteYn);
+
+    // ✅ 관리자 - 통계용
+    long countByDeleteYn(String deleteYn);
 }

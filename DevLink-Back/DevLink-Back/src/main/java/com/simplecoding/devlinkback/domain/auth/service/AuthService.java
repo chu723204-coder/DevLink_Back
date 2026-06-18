@@ -29,7 +29,6 @@ public class AuthService {
     // 회원가입
     @Transactional
     public ApiResponse<Void> signup(SignupRequest request) {
-        // ✅ 탈퇴한 유저 재가입 허용 - 활성 유저만 중복 체크
         if (userRepository.existsByEmailAndDeleteYn(request.getEmail(), "N")) {
             return ApiResponse.fail("이미 사용 중인 이메일입니다.");
         }
@@ -54,12 +53,21 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (user == null) {
             return ApiResponse.fail("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         if (user.getDeleteYn().equals("Y")) {
             return ApiResponse.fail("탈퇴한 회원입니다.");
+        }
+
+        // ✅ 정지 체크를 비밀번호 체크보다 먼저
+        if (user.getBanned()) {
+            return ApiResponse.fail("정지된 계정입니다. 관리자에게 문의하세요.");
+        }
+
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ApiResponse.fail("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getUserId(), user.getRole().name());
@@ -123,7 +131,6 @@ public class AuthService {
 
     // 이메일 인증 코드 발송
     public ApiResponse<Void> sendEmailCode(String email) {
-        // ✅ 탈퇴한 유저 재가입 허용 - 활성 유저만 중복 체크
         if (userRepository.existsByEmailAndDeleteYn(email, "N")) {
             return ApiResponse.fail("이미 사용 중인 이메일입니다.");
         }

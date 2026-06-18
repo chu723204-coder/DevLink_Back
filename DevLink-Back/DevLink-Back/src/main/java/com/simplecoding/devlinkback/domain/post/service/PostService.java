@@ -1,5 +1,7 @@
 package com.simplecoding.devlinkback.domain.post.service;
 
+import com.simplecoding.devlinkback.domain.notification.entity.Notification;
+import com.simplecoding.devlinkback.domain.notification.service.NotificationService;
 import com.simplecoding.devlinkback.domain.post.dto.CommentResponseDto;
 import com.simplecoding.devlinkback.domain.post.dto.PostResponseDto;
 import com.simplecoding.devlinkback.domain.post.entity.Comment;
@@ -26,8 +28,8 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    // Post → PostResponseDto 변환
     private PostResponseDto toDto(Post post) {
         String nickname = userRepository.findById(post.getUserId())
                 .map(u -> u.getNickname())
@@ -49,7 +51,6 @@ public class PostService {
                 .build();
     }
 
-    // Comment → CommentResponseDto 변환
     private CommentResponseDto toCommentDto(Comment comment) {
         String nickname = userRepository.findById(comment.getUserId())
                 .map(u -> u.getNickname())
@@ -63,7 +64,6 @@ public class PostService {
                 .build();
     }
 
-    // 게시글 전체 목록 조회
     @Transactional(readOnly = true)
     public ApiResponse<List<PostResponseDto>> getPosts() {
         List<PostResponseDto> posts = postRepository.findByDeleteYnOrderByCreatedAtDesc("N")
@@ -71,7 +71,6 @@ public class PostService {
         return ApiResponse.success(posts, "게시글 목록 조회 성공");
     }
 
-    // 카테고리별 게시글 목록 조회
     @Transactional(readOnly = true)
     public ApiResponse<List<PostResponseDto>> getPostsByCategory(Post.Category category) {
         List<PostResponseDto> posts = postRepository
@@ -80,7 +79,6 @@ public class PostService {
         return ApiResponse.success(posts, "카테고리별 게시글 목록 조회 성공");
     }
 
-    // 게시글 상세 조회
     @Transactional
     public ApiResponse<PostResponseDto> getPost(Long postId) {
         Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
@@ -89,7 +87,6 @@ public class PostService {
         return ApiResponse.success(toDto(post), "게시글 상세 조회 성공");
     }
 
-    // 게시글 작성
     @Transactional
     public ApiResponse<PostResponseDto> createPost(Long userId, String title, String content, Post.Category category) {
         Post post = Post.builder()
@@ -101,7 +98,6 @@ public class PostService {
         return ApiResponse.success(toDto(postRepository.save(post)), "게시글 작성 성공");
     }
 
-    // 게시글 수정
     @Transactional
     public ApiResponse<PostResponseDto> updatePost(Long postId, Long userId, String title, String content, Post.Category category) {
         Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
@@ -113,7 +109,6 @@ public class PostService {
         return ApiResponse.success(toDto(post), "게시글 수정 성공");
     }
 
-    // 게시글 삭제
     @Transactional
     public ApiResponse<Void> deletePost(Long postId, Long userId) {
         Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
@@ -125,10 +120,9 @@ public class PostService {
         return ApiResponse.success(null, "게시글 삭제 성공");
     }
 
-    // 좋아요 토글
     @Transactional
     public ApiResponse<Void> toggleLike(Long postId, Long userId) {
-        postRepository.findByPostIdAndDeleteYn(postId, "N")
+        Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
                 .orElseThrow(() -> CommonException.notFound("게시글을 찾을 수 없습니다."));
 
         if (postLikeRepository.existsByPostIdAndUserId(postId, userId)) {
@@ -142,11 +136,22 @@ public class PostService {
                     .userId(userId)
                     .build();
             postLikeRepository.save(like);
+
+            // 좋아요 알림 (내 글에 내가 좋아요 시 알림 제외)
+            if (!post.getUserId().equals(userId)) {
+                String likerNickname = userRepository.findById(userId)
+                        .map(u -> u.getNickname()).orElse("누군가");
+                notificationService.sendNotification(
+                        post.getUserId(),
+                        Notification.NotificationType.LIKE,
+                        likerNickname + "님이 회원님의 게시글을 좋아합니다.",
+                        "/posts/" + postId
+                );
+            }
             return ApiResponse.success(null, "좋아요 성공");
         }
     }
 
-    // ✅ 댓글 목록 조회 - nickname 포함 DTO 반환
     @Transactional(readOnly = true)
     public ApiResponse<List<CommentResponseDto>> getComments(Long postId) {
         List<CommentResponseDto> comments = commentRepository
@@ -157,21 +162,33 @@ public class PostService {
         return ApiResponse.success(comments, "댓글 목록 조회 성공");
     }
 
-    // ✅ 댓글 작성 - nickname 포함 DTO 반환
     @Transactional
     public ApiResponse<CommentResponseDto> createComment(Long postId, Long userId, String content) {
-        postRepository.findByPostIdAndDeleteYn(postId, "N")
+        Post post = postRepository.findByPostIdAndDeleteYn(postId, "N")
                 .orElseThrow(() -> CommonException.notFound("게시글을 찾을 수 없습니다."));
+
         Comment comment = Comment.builder()
                 .postId(postId)
                 .userId(userId)
                 .content(content)
                 .build();
         Comment saved = commentRepository.save(comment);
+
+        // 댓글 알림 (내 글에 내가 댓글 시 알림 제외)
+        if (!post.getUserId().equals(userId)) {
+            String commenterNickname = userRepository.findById(userId)
+                    .map(u -> u.getNickname()).orElse("누군가");
+            notificationService.sendNotification(
+                    post.getUserId(),
+                    Notification.NotificationType.COMMENT,
+                    commenterNickname + "님이 댓글을 달았습니다: " + content,
+                    "/posts/" + postId
+            );
+        }
+
         return ApiResponse.success(toCommentDto(saved), "댓글 작성 성공");
     }
 
-    // 댓글 수정
     @Transactional
     public ApiResponse<CommentResponseDto> updateComment(Long commentId, Long userId, String content) {
         Comment comment = commentRepository.findByCommentIdAndDeleteYn(commentId, "N")
@@ -183,7 +200,6 @@ public class PostService {
         return ApiResponse.success(toCommentDto(comment), "댓글 수정 성공");
     }
 
-    // 댓글 삭제
     @Transactional
     public ApiResponse<Void> deleteComment(Long commentId, Long userId) {
         Comment comment = commentRepository.findByCommentIdAndDeleteYn(commentId, "N")

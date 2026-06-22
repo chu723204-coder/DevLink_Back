@@ -54,4 +54,10 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Void>> closeStudy(@PathVariable Long studyId) {
         return ResponseEntity.ok(adminService.closeStudy(studyId));
     }
+
+    // 스터디 강제 삭제
+    @DeleteMapping("/studies/{studyId}")
+    public ResponseEntity<ApiResponse<Void>> deleteStudy(@PathVariable Long studyId) {
+        return ResponseEntity.ok(adminService.deleteStudy(studyId));
+    }
 }

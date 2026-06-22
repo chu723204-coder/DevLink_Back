@@ -80,4 +80,13 @@ public class AdminService {
         study.close();
         return ApiResponse.success(null, "스터디 강제 마감 성공");
     }
+
+    // ── 스터디 강제 삭제 ────────────────────────────────────────
+    @Transactional
+    public ApiResponse<Void> deleteStudy(Long studyId) {
+        var study = studyRepository.findByStudyIdAndDeleteYn(studyId, "N")
+                .orElseThrow(() -> CommonException.notFound("스터디를 찾을 수 없습니다."));
+        study.delete();
+        return ApiResponse.success(null, "스터디 강제 삭제 성공");
+    }
 }

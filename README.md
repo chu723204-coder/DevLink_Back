@@ -12,19 +12,19 @@
 
 <br />
 
-## 👥 팀원 소개
+## 👤 개발자 소개
 
 | 이름 | 역할 | GitHub |
 |------|------|--------|
-| 팀원A | Frontend / Backend | [추상현](https://github.com/) |
+| 추상현 | Frontend / Backend (1인 풀스택) | [chu723204-coder](https://github.com/chu723204-coder) |
 
 <br />
 
 ## 🛠 기술 스택
 
 ### Backend
-![Java](https://img.shields.io/badge/Java-17-007396?style=flat-square&logo=java&logoColor=white)
-![SpringBoot](https://img.shields.io/badge/Spring_Boot-3.5.14-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![Java](https://img.shields.io/badge/Java-17-007396?style=flat-square&logo=openjdk&logoColor=white)
+![SpringBoot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white)
 ![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)
 ![JPA](https://img.shields.io/badge/JPA-Hibernate-59666C?style=flat-square&logo=hibernate&logoColor=white)
 ![QueryDSL](https://img.shields.io/badge/QueryDSL-5.0-brightgreen?style=flat-square)
@@ -40,9 +40,7 @@
 
 ### Database
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
-
-### 배포
-![Railway](https://img.shields.io/badge/Railway-0B0D0E?style=flat-square&logo=railway&logoColor=white)
+![Railway](https://img.shields.io/badge/Railway-DB호스팅-0B0D0E?style=flat-square&logo=railway&logoColor=white)
 
 ### API 문서
 ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black)
@@ -73,19 +71,31 @@ src/main/java/com/devlink/
 ## ✨ 주요 기능
 
 - **회원 관리** — 이메일 회원가입 / 카카오 · 네이버 소셜 로그인 / JWT 인증
-- **게시판** — 자유게시판 / 면접 후기 / 기술 질문 / 취업 정보 CRUD
-- **스터디 모집** — 모집글 등록, 지원, 수락/거절, 마감 처리
-- **실시간 알림** — 댓글, 스터디 지원/수락 알림 (SSE)
+- **게시판** — 자유게시판 / 면접 후기 / 기술 질문 / 취업 정보 CRUD (카테고리 필터 + 정렬)
+- **스터디 모집** — 모집글 등록, 지원, 수락/거절 → 채팅방 자동 생성
+- **실시간 알림** — 댓글, 좋아요, 스터디 지원/수락/거절 알림 (SSE)
 - **실시간 채팅** — 스터디 팀원 간 채팅방 (WebSocket STOMP)
-- **마이페이지** — 프로필 수정, 내 게시글, 스터디 내역
+- **관리자 페이지** — 회원 정지/해제/탈퇴, 게시글 관리, 신고 처리/반려
+- **신고 시스템** — 게시글·댓글 신고, 중복 신고 방지, 계정 정지 처리
+
+<br />
+
+## 🔐 인증 구조
+
+| 토큰 | 저장소 | 유효기간 | 목적 |
+|------|--------|----------|------|
+| Access Token | Zustand 메모리 (프론트) | 30분 | XSS 공격 방지 |
+| Refresh Token | HttpOnly Cookie | 7일 | 토큰 탈취 방지 |
+
+- SecurityConfig: STATELESS 세션 정책, 401 커스텀 응답 (302 리다이렉트 방지)
+- STOMP 연결 시 ChannelInterceptor로 JWT 헤더 검증
+- ROLE_ADMIN 권한은 시드 데이터로 초기 발급, `@PreAuthorize`로 API 레벨 이중 검증
 
 <br />
 
 ## 🔗 관련 링크
 
-- **배포 링크**: [https://devlink-back.railway.app](https://devlink-back.railway.app)
-- **프론트 레포**: [DevLink_Front](https://github.com/)
-- **Swagger API 문서**: [https://devlink-back.railway.app/swagger-ui/index.html](https://devlink-back.railway.app/swagger-ui/index.html)
+- **프론트 레포**: [DevLink_Front](https://github.com/chu723204-coder)
 
 <br />
 
@@ -100,7 +110,7 @@ src/main/java/com/devlink/
 
 ```bash
 # 1. 레포지토리 클론
-git clone https://github.com/your-repo/DevLink_Back.git
+git clone https://github.com/chu723204-coder/DevLink_Back.git
 cd DevLink_Back
 
 # 2. 환경변수 설정
@@ -156,27 +166,47 @@ spring.security.oauth2.client.registration.naver.client-secret=your_naver_client
 | 알림 | GET | /api/notifications/subscribe | SSE 알림 구독 | ✅ |
 | 알림 | GET | /api/notifications | 알림 목록 | ✅ |
 | 채팅 | GET | /api/chat/rooms | 채팅방 목록 | ✅ |
+| 관리자 | GET | /api/admin/users | 회원 목록 조회 | ✅ (ADMIN) |
+| 관리자 | POST | /api/admin/users/{id}/ban | 회원 정지 | ✅ (ADMIN) |
+| 관리자 | GET | /api/admin/reports | 신고 목록 조회 | ✅ (ADMIN) |
 
-> 전체 API 문서는 Swagger에서 확인하세요.
+> 전체 API 문서는 로컬 실행 후 `http://localhost:8080/swagger-ui/index.html` 에서 확인하세요.
 
 <br />
 
 ## 🌿 브랜치 전략
 
 ```
-main          # 최종 배포 브랜치
+main          # 최종 브랜치
 test_table    # 개발 통합 브랜치 (테스트/오류 확인)
 feature/*     # 기능 개발 브랜치 (ex. feature/auth-login)
 fix/*         # 버그 수정 브랜치 (ex. fix/notification-bug)
 ```
 
-> PR 시 1명 이상 코드 리뷰 승인 필수
+<br />
+
+## 🛠 트러블슈팅
+
+### 1. WebSocket 인증 401 오류
+- **문제**: STOMP 메시지 전송 시 401 Unauthorized 에러 발생
+- **원인**: SecurityConfig에서 `/ws/**` 경로를 차단하고 있었음
+- **해결**: `/ws/**` permitAll 추가 + ChannelInterceptor로 STOMP 헤더에서 JWT 검증
+
+### 2. STOMP UTF-8 인코딩 문제
+- **문제**: 한글 채팅 메시지가 깨져서 수신됨
+- **원인**: 기본 MessageConverter가 UTF-8 인코딩을 지원하지 않음
+- **해결**: `MappingJackson2MessageConverter` 추가로 해결
+
+### 3. 순환 참조 (Circular Dependency)
+- **문제**: `chatService.ts`에서 `useAuthStore` import 시 순환 참조 오류
+- **원인**: `api.ts` → `useAuthStore` → `chatService` 간 의존 순환
+- **해결**: `useAuthStore.getState()`를 파라미터로 전달하는 방식으로 변경
 
 <br />
 
 ## 📅 개발 기간
 
-2026.06.04 ~ 2026.06.30
+2026.06.08 ~ 2026.06.22
 
 <br />
 

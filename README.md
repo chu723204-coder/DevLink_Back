@@ -65,7 +65,7 @@
 ## 🗄 5. 시스템 구조
 
 ### ERD
-> 이미지 추가 예정
+![ERD](https://github.com/user-attachments/assets/e991c9a0-6a93-4a31-b32d-e42a4ba22ec1)
 
 ### 데이터 흐름
 ```

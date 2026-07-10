@@ -78,13 +78,16 @@
     → 응답
 ```
 
+### API 문서
+Swagger UI를 통해 전체 API 문서화 및 테스트 완료
+
+- 로컬 실행 후 `http://localhost:8080/swagger-ui/index.html` 접속
+
 ---
 
 ## 🔍 6. 핵심 구현 내용
 
 ### JWT 듀얼토큰 설계
-
-**왜 이렇게 설계했는가?**
 
 이전 ChargeNow 프로젝트에서 Access Token을 로컬스토리지에 저장했는데, 강사님으로부터 XSS 공격에 취약하다는 피드백을 받았습니다. 이를 개선하기 위해 DevLink에서는 아래와 같이 분리 설계했습니다.
 
